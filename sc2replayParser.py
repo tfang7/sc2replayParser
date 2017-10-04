@@ -94,7 +94,7 @@ class replayParser:
 		# Example: players["Byun"] = Player Object() of Byun
 		players = {}
 		files = os.listdir(path)
-		filesToCount = 100#len(files)
+		filesToCount = len(files)
 		sc2 = SC2Factory(
 			directory='~/' + path
 		)
