@@ -10,3 +10,6 @@ Current functions
 5. writes a csv file in Source,Target format to represent player match ups as nodes/edges.
 
 Thanks to Kevin @ http://lotv.spawningtool.com/build/ for supplying me with replays in order to test this script.
+
+Good luck,
+ Tommy
