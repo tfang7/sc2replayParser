@@ -1,11 +1,11 @@
 #from sc2reader.factories import SC2Factory
 import sc2reader
 from sc2reader.factories import SC2Factory
-from playerData import Player
 from sc2reader.engine.plugins import APMTracker
 import os
 from os import listdir
 import argparse
+
 #Player object contained in player dictionary
 class Player(object):
 	name = ""
