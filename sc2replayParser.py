@@ -1,10 +1,12 @@
 #from sc2reader.factories import SC2Factory
 import sc2reader
 from sc2reader.factories import SC2Factory
+from playerData import Player
 from sc2reader.engine.plugins import APMTracker
 import os
 from os import listdir
 import argparse
+from shutil import copyfile
 
 #Player object contained in player dictionary
 class Player(object):
@@ -86,43 +88,121 @@ def formatTeams(replay):
 class replayParser:
 	def __init__(self, args):
 		self.args = args.parse_args()
-		self.run()
-		
+		self.matchDict = {}
 	def run(self):
-		path = './' + self.args.replayPath#'./replays/lotv/replays'
+		path = './' + self.args.replayPath + '/'#./replays/lotv/replays'
 		#Dictionary for holding player information
 		# Example: players["Byun"] = Player Object() of Byun
 		players = {}
 		files = os.listdir(path)
-		filesToCount = len(files)
+		filesToCount = 1000#len(files)
 		sc2 = SC2Factory(
 			directory='~/' + path
 		)
+		outfiles = []
+		fileDict = {}
 		#Enable APM tracker if you need this information.
 		#sc2reader.engine.register_plugin(APMTracker())
 		replayCount = 0
+		done = False
 		print("#-----------Running replay analysis-----------#")
 		for i in range(0,filesToCount):
+			#print("filename " + files[i])
 			replayCount += 1
-			percentDone = (replayCount/filesToCount)
-			if (percentDone % 0.25 == 0): print( str(percentDone * 100) + "%")
+			#percentDone = (replayCount/filesToCount)
+			#if (percentDone % 0.25 == 0): print( str(percentDone * 100) + "%")
 			try:
-				replay = (sc2.load_replay(paths + "/" + files[i], load_level = 2))
+				replay = (sc2.load_replay(path + files[i], load_level = 3))
+				#get rid of ai players
+				if (self.isValidName(replay.players) == False):
+					continue
 				if (len(replay.players) == 2):
-					for player in replay.players:
-						if (is_ascii(player.name) == False or "." in player.name):
-							continue
-						else:
-							p = addPlayer(player.name, players)
-							p.race = (player.pick_race)
-
-					checkWinner(replay, players)
+					races = ""
+					#print(replay.players)
+					for p in replay.players:
+						races += (p.play_race[0])
+					c = self.checkMatch(races, 'z','p','t')
+					if (c == True):
+						outfiles.append(i)
+				for count in self.matchDict:
+					if (count >= 50):
+				 		done = True
+				if (done or i >= filesCount):
+					break
+				print("Looping")
 			except:
 				pass
 		sc2.configure(depth=1)
-		print("#-----------" + str(replayCount) + " Replays counted" + "-----------#")
-		
-	#Adds a player to the player dictionary
+		print(self.matchDict)
+		self.copyReplays(path, "out/", files, outfiles)
+		return (outfiles)
+	def copyReplays(self, src, target, files, indices):
+		for i in indices:
+			fp = src + files[i]
+			targ = target + files[i]
+			copyfile(fp, targ)
+
+	def isValidName(self, players):
+		invalid = "."
+		for p in players:
+			for char in invalid:
+				if char in p.name:
+					return False
+		return True
+
+	def checkMatchCounts(self, r1, r2, count):
+		if self.matchDict[r1+r2] >= count:
+			print("checking counts" + self.matchDict)
+			return True
+		return False
+	def checkMatch(self, races, r1, r2, r3):
+		check = False
+		races = races.lower()
+		if r1 in races:
+			if races == r1*2 and r1 != None:
+				if r1+r1 not in self.matchDict:
+					self.matchDict[r1+r1] = 1
+					check = True
+				else:
+					if (self.checkMatchCounts(r1, r1, 50) == False):
+						self.matchDict[r1+r1] += 1
+						check = True
+			elif races == r1 + r2 or  races[::-1] == (r1+ r2) and r2 != None:
+				if r1+r2 not in self.matchDict:
+					self.matchDict[r1+r2] = 1
+					check = True
+				else:
+					if (self.checkMatchCounts(r1, r2, 50) == False):
+						self.matchDict[r1+r2] += 1	
+						check = True
+			elif races == r1 + r3 or races[::-1] == (r1 + r3) and r3 != None:
+				if r1+r3 not in self.matchDict:
+					self.matchDict[r1+r3] = 1
+					check = True
+				else:
+					if (self.checkMatchCounts(r1, r3, 50) == False):
+						self.matchDict[r1+r3] += 1	
+						check = True
+		return check
+	def	countRaces(self, raceList, race):
+		matchup = ""
+		for i in raceList:
+			if i == "Terran":
+				matchup += "t"
+			elif i == "Zerg":
+				matchup += "z"
+			elif i == "Protoss":
+				matchup += "p"
+		return matchup
+#		, matchupCounts
+#		if "z" in matchup:
+#			if ("zz" == matchup):
+#				matchupCounts["zz"] += 1
+#			if ("zp" == matchup or "zp" == matchup.reverse()):
+#				matchupCounts["zp"] += 1
+#			if ("zt" == matchup or "zt" == matchup.reverse()):
+#				matchupCounts["zt"] += 1
+			
 	def addPlayer(self, player, players):
 		name = player.strip(" ")
 		if (name not in players):
@@ -182,7 +262,9 @@ def main():
 	parser.add_argument("replayPath", type=str,
 						help="path to replay folder")
 	replayManager = replayParser(parser)
-	return replayManager.run()
+	outfiles = replayManager.run()
+	print("Obtained " + str(len(outfiles)) + " replays within specified parameters")
+	print(outfiles)
 	
 
 if __name__ == "__main__":
